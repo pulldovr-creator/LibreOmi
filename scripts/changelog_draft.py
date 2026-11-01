@@ -34,7 +34,8 @@ IMPORTANT
   - PR titles in this repository are written in Korean. This script does
     NOT translate them -- it prints the raw title text next to each PR
     link. Whoever pastes the draft into CHANGELOG.md must rewrite each line
-    into concise, user-facing English before committing.
+    into concise, user-facing Korean before committing, per the repository's
+    Korean documentation policy (AGENTS.md).
   - Requires the GitHub CLI (`gh`) to be installed and authenticated. No
     other third-party dependencies are used -- standard library only.
 """

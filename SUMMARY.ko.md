@@ -69,10 +69,12 @@ M4 와 M5 는 M3 이후 병렬 가능. 상세 완료 기준은 `docs/06-roadmap.
 
 ## 5. 언어 정책
 
-- 코드, 주석, 커밋 메시지, `docs/`: 영어.
+- 코드, 주석, 커밋 메시지: 영어 (커밋은 Conventional Commits + gitmoji).
+- `README.md`, `AGENTS.md`, `docs/`, `CHANGELOG.md` 등 마크다운: 한국어.
 - 이슈·PR: 한국어 (PR 본문 마지막에 영어 한 줄 요약). 템플릿은 `.github/` 에 준비됨.
 - 에이전트가 본인에게 보고할 때: 한국어.
-- `AGENTS.md`(= `CLAUDE.md`) 에 이 규칙과 문서 지도가 있어 다른 구독 도구(Codex, Cursor 등)도 같은 규약으로 움직입니다.
+- `main` 병합은 `--no-ff` 병합 커밋으로만 한다.
+- `AGENTS.md`(= `CLAUDE.md` 심볼릭 링크)가 규칙 원본이라 다른 구독 도구(Codex, Cursor 등)도 같은 규약으로 움직입니다.
 
 ## 6. 리스크
 

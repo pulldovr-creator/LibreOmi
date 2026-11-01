@@ -1,69 +1,88 @@
-# 08 — Development workflow
+# 08 — 개발 워크플로
 
-## 1. Language policy
+## 1. 언어 정책
 
-| Artefact | Language | Why |
-|----------|----------|-----|
-| Source code, identifiers, comments, docstrings | English | ecosystem default; agents produce better Dart with English context |
-| `docs/`, `README.md`, `AGENTS.md`, CHANGELOG | English | future contributors |
-| `docs/09-device-verification.md` (the one exception) | **Korean** | it is a runbook the owner reads phone-in-hand while walking a device through the checks; nobody else executes it (LO-88) |
-| Commit messages | English, Conventional Commits (`feat(ble): request MTU 512 on Android`) | tooling, changelog generation |
-| GitHub issues and pull requests (bootstrap phase) | **Korean** title + body; PR body ends with a one-line English summary | project owner reads/writes Korean; the English line keeps history greppable |
-| In-app strings | English and Korean, through `lib/l10n/*.arb` (LO-62) | `app_en.arb` is the template every new string is added to first; `app_ko.arb` translates it in the same PR, and `test/l10n/arb_parity_test.dart` fails the build if it does not |
-| Owner-facing summaries produced by agents | Korean | token efficiency for the owner; see `SUMMARY.ko.md` |
+규칙 원본은 [`AGENTS.md`](../AGENTS.md) §3.1과 §4.2이고, 이 표는 그 요약이다.
 
-After public launch, issues from outside contributors may be in any language; maintainers reply in the issue's language.
+| 산출물 | 언어 | 이유 |
+|--------|------|------|
+| 소스 코드, 식별자, 주석, docstring | English | 생태계 기본값. English 맥락에서 Dart 생성 품질이 좋다 |
+| `README.md`, `AGENTS.md`, `docs/`, `CHANGELOG.md`, `.github/**/*.md` | **한국어** | 프로젝트 소유자가 읽고 유지보수한다. 매뉴얼은 한국어가 기본이다 |
+| `docs/08` §8.1 (Play Console 선언문) | English | Play Console에 그대로 붙여넣는 원문이라 번역하지 않는다 |
+| 커밋 메시지 | English, Conventional Commits + gitmoji (`✨ feat(ble): request MTU 512 on Android`) | 도구 연동과 체인지로그 생성. 유형 분류는 §2.2 |
+| GitHub 이슈/PR | **한국어** 제목·본문, PR 본문 끝에 English summary 한 줄 | 소유자가 한국어로 읽고 쓴다. English 한 줄은 히스토리 검색용 |
+| 앱 문자열 | `lib/l10n/*.arb`의 영어·한국어 (LO-62) | `app_en.arb`가 템플릿이고, `app_ko.arb`를 같은 PR에서 번역한다. `test/l10n/arb_parity_test.dart`가 어긋나면 실패한다 |
+| 에이전트가 만드는 소유자용 요약 | 한국어 | 소유자 가독성. 예: `SUMMARY.ko.md` |
 
-## 2. Branching and PR flow
+기존 영문 문서는 그 문서를 실질적으로 수정하는 PR에서 통째로 한국어로 옮긴다. 한 문서
+안에서 언어를 섞지 않는다(§8.1 예외). 공개 이후 외부 기여자의 이슈는 어떤 언어든
+허용하며, 메인테이너는 이슈의 언어로 답한다.
 
-- `main` is protected; CI must pass. The workflow is `.github/workflows/ci.yml` (LO-04): one
-  `ubuntu-latest` job on every pull request and every push to `main`, running `flutter pub get`
-  → `flutter analyze` → `flutter test` → `flutter build apk --debug --target-platform android-arm64`.
-  It reads the Flutter and JDK versions out of `mise.toml` instead of repeating them, so CI and a
-  local checkout cannot drift apart. Analyze runs with `--no-fatal-infos --no-fatal-warnings`:
-  errors fail the job, while the warnings and infos inherited from upstream do not. Clearing those
-  is out of scope for LO-04 and is not filed as a backlog item yet. The debug APK is a compile
-  check and is not uploaded — release artifacts come from `.github/workflows/release.yml`
-  (LO-63), which runs on `v*` tags only. Neither workflow currently executes: GitHub Actions
-  is disabled on this account for billing reasons, so both are validated with `actionlint` and
-  by running the same commands locally.
-- One branch per backlog item: `lo-12-ble-mtu`. One PR per branch, squash-merged.
-- PR template (Korean) asks for: 목적, 변경 내용, 테스트 방법(에뮬레이터 불가 항목은 실기기 명시), 스크린샷/로그, 관련 이슈 (`Closes #n`).
-- Every PR that touches `device/`, `audio/`, `session/`, or `platform/` must include a
-  filled **device smoke checklist** (§5) in the description, because CI cannot exercise BLE.
+## 2. 브랜치와 PR 흐름
 
-## 3. Definition of done
+- `main`은 보호 브랜치이고 CI가 통과해야 한다. 워크플로는
+  `.github/workflows/ci.yml`(LO-04)이다. PR과 `main` push마다 `ubuntu-latest` 잡 하나가
+  `flutter pub get` → `flutter analyze` → `flutter test` →
+  `flutter build apk --debug --target-platform android-arm64`를 실행한다. Flutter와 JDK
+  버전은 `mise.toml`에서 읽어 오므로 CI와 로컬 체크아웃이 어긋나지 않는다. analyze는
+  `--no-fatal-infos --no-fatal-warnings`로 실행한다. 에러만 실패시키고, 업스트림에서
+  물려받은 경고·정보는 실패시키지 않는다. 그 정리는 LO-04 범위 밖이며 아직 백로그에
+  없다. 디버그 APK는 컴파일 확인용이고 업로드하지 않는다. 릴리스 산출물은
+  `v*` 태그에서만 도는 `.github/workflows/release.yml`(LO-63)이 만든다. 현재 이 두
+  워크플로는 실행되지 않는다. 이 계정은 결제 문제로 GitHub Actions가 비활성화되어 있어,
+  둘 다 `actionlint`와 동일 명령의 로컬 실행으로 검증한다.
+- 백로그 항목 하나에 브랜치 하나: `lo-12-ble-mtu`. 브랜치 하나에 PR 하나.
+- `main` 병합은 **항상 `--no-ff`** 병합 커밋으로 한다. squash merge와 rebase merge는
+  쓰지 않는다(절차와 메시지 형식: [`AGENTS.md`](../AGENTS.md) §4.3).
+- PR 템플릿(한국어)이 요구하는 항목: 목적, 변경 내용, 테스트 방법(에뮬레이터로 불가한
+  항목은 실기기 명시), 스크린샷/로그, 관련 이슈(`Closes #n`).
+- `device/`, `audio/`, `session/`, `platform/`을 건드리는 PR은 설명에 **기기 스모크
+  체크리스트**(§5)를 채워 넣어야 한다. CI는 BLE를 검증할 수 없다.
 
-1. Acceptance criteria in `06-roadmap.md` met and stated in the PR.
-2. `flutter analyze` has zero warnings in changed files.
-3. Unit tests added for any parser / state machine / repo change.
-4. Docs updated if behaviour or protocol assumptions changed (`05-omi-ble-protocol.md` in particular).
-5. No new `^` version ranges on native plugins (BLE, opus, sherpa, foreground task).
+### 2.1 커밋
 
-## 4. Working with AI coding agents
+커밋은 브랜치 안에서 유형별로 묶고, 한 커밋에 서로 다른 유형을 섞지 않는다. 형식은
+`<gitmoji> <type>(<scope>): <English summary>`이고, 유형 표와 정렬 순서는
+[`AGENTS.md`](../AGENTS.md) §4.2에 있다.
 
-The backlog is written so that each issue is self-contained for an agent. When
-delegating an issue:
+### 2.2 PR 제목
 
-1. Paste the issue body and point the agent at `AGENTS.md` (which links the docs).
-2. Require the agent to state which document sections it relied on and to update them if wrong.
-3. Agents cannot test BLE. They must produce: unit tests for pure logic, a `FakeOmiDevice`
-   fixture where applicable, and the exact `adb logcat` filters / manual steps the owner
-   should run on a phone.
-4. The owner runs the device smoke checklist and pastes results into the PR (Korean is fine).
+PR 제목은 Conventional Commits 접두사로 시작한다(예: `feat(ble): BLE MTU 협상`).
+릴리스 초안 스크립트(`scripts/changelog_draft.py`)가 제목의 접두사로
+Added/Changed/Fixed/Removed 절을 나누기 때문이다. 접두사가 없으면 `Changed`로 떨어진다.
 
-Suggested split: agents do M0, M3 (refactor + tests), M4–M6 logic; the owner personally
-drives M1 and M2 on hardware because those milestones are dominated by device-specific
-behaviour and permission dialogs that must be observed by a human.
+## 3. 완료 정의
 
-## 5. Device smoke checklist (copy into PR)
+1. `06-roadmap.md`의 인수 조건을 충족하고 PR에 명시했다.
+2. 변경한 파일에서 `flutter analyze` 경고가 0이다.
+3. 파서·상태 머신·저장소 변경에는 단위 테스트를 넣었다.
+4. 동작이나 프로토콜 가정이 바뀌면 문서를 갱신했다(특히 `05-omi-ble-protocol.md`).
+5. 네이티브 플러그인(BLE, opus, sherpa, foreground task)에 새 `^` 버전 범위를
+   추가하지 않았다.
 
-This is the short form that goes into **every PR** touching `device/`, `audio/`, `session/`
-or `platform/`. The long form — every owner-verification step from PRs #40–#86, deduplicated
-and reordered into a single walkthrough, with expected values, what to capture and where to
-paste it — is **[`09-device-verification.md`](09-device-verification.md)** (Korean). Run that
-one when doing a batch verification session; use the checklist below per PR. If the two ever
-disagree, fix both in the same PR.
+## 4. AI 코딩 에이전트와 작업하기
+
+백로그는 이슈 하나가 에이전트에게 자기완결적이도록 작성되어 있다. 이슈를 위임할 때:
+
+1. 이슈 본문을 붙이고, 에이전트가 [`AGENTS.md`](../AGENTS.md)와 그 문서가 링크하는
+   문서를 읽게 한다.
+2. 어떤 문서 절을 근거로 삼았는지 보고하고, 틀렸으면 같은 PR에서 고치게 한다.
+3. 에이전트는 BLE를 테스트할 수 없다. 순수 로직 단위 테스트, 필요한 경우
+   `FakeOmiDevice` 픽스처, 소유자가 폰에서 실행할 정확한 `adb logcat` 필터와 수동 절차를
+   산출물로 내야 한다.
+4. 소유자가 기기 스모크 체크리스트를 실행하고 결과를 PR에 붙인다(한국어 무방).
+
+분담 제안: 에이전트가 M0, M3(리팩터링+테스트), M4–M6 로직을 맡고, 소유자가 M1·M2를
+직접 기기에서 수행한다. 그 마일스톤은 기기별 동작과 사람이 관찰해야 하는 권한
+다이얼로그가 지배적이기 때문이다.
+
+## 5. 기기 스모크 체크리스트 (PR에 복사)
+
+`device/`, `audio/`, `session/`, `platform/`을 건드리는 **모든 PR**에 들어가는 짧은
+형식이다. 긴 형식은 PR #40–#86의 소유자 검증 단계를 중복 제거·재정렬한 하나의
+워크스루로, 기대값과 캡처 방법까지 담고 있다:
+**[`09-device-verification.md`](09-device-verification.md)**. 배치 검증 세션에서는 긴
+형식을, PR마다는 아래 체크리스트를 쓴다. 둘이 어긋나면 같은 PR에서 둘 다 고친다.
 
 ```
 기기: <제조사/모델/Android 버전>   펌웨어: <Omi firmware>   빌드: <commit>
@@ -79,7 +98,7 @@ disagree, fix both in the same PR.
 [ ] 앱 종료 후 재시작 시 자동 재연결
 ```
 
-Useful logcat filters:
+유용한 logcat 필터:
 
 ```bash
 adb logcat -s flutter:V FlutterBluePlus:V BluetoothGatt:V
@@ -87,41 +106,42 @@ adb shell dumpsys activity services | grep -i foreground
 adb shell dumpsys deviceidle whitelist | grep libreomi
 ```
 
-## 6. Secrets and test accounts
+## 6. 비밀키와 테스트 계정
 
-- Deepgram key and OpenAI key are entered in-app only; never committed. CI has no keys;
-  tests use fakes.
-- For agents running on a laptop, `sqflite_common_ffi` is used in tests so no device DB is needed.
+- Deepgram 키와 LLM 키는 앱에서만 입력하며 절대 커밋하지 않는다. CI에는 키가 없고,
+  테스트는 페이크를 쓴다.
+- 노트북에서 도는 에이전트를 위해 테스트에는 `sqflite_common_ffi`를 써서 기기 DB가
+  필요 없다.
 
-## 7. Releases (LO-63)
+## 7. 릴리스 (LO-63)
 
-### 7.1 Versioning
+### 7.1 버전 관리
 
-`pubspec.yaml` holds `version: <name>+<code>`. LibreOmi restarts at `0.1.0+1`; upstream
-omibutfree's `2.1.0` does not describe this fork and is not continued.
+`pubspec.yaml`이 `version: <name>+<code>`를 갖는다. LibreOmi는 `0.1.0+1`에서 다시
+시작한다. 업스트림 omibutfree의 `2.1.0`은 이 포크를 설명하지 않으므로 이어 쓰지 않는다.
 
-- `<name>` is semver, and is what the `vX.Y.Z` tag and the GitHub Release are named after.
-- `<code>` becomes the Android `versionCode` and **only ever increases**, including across
-  a version-name downgrade — Android and Play both refuse an update whose code went backwards.
-  Bump it on every build that leaves this machine, not only on every version name.
-- With `--split-per-abi` the Flutter Gradle plugin adds `1000 * ABI_VERSION` to the code per
-  APK, so the arm64 and armeabi APKs of one build get distinct, ordered codes automatically.
+- `<name>`은 semver이고, `vX.Y.Z` 태그와 GitHub Release 이름이 이 값을 따른다.
+- `<code>`는 Android `versionCode`가 되며 **항상 증가**한다. 버전 이름이 내려가도
+  마찬가지다. Android와 Play 모두 code가 뒤로 간 업데이트를 거부한다. 이 머신을 떠나는
+  모든 빌드에서 올리고, 버전 이름을 올릴 때만 올리는 것이 아니다.
+- `--split-per-abi`를 쓰면 Flutter Gradle 플러그인이 APK마다 `1000 * ABI_VERSION`을
+  더하므로, 한 빌드의 arm64·armeabi APK가 자동으로 서로 다른 순서의 code를 갖는다.
 
-### 7.2 Signing key
+### 7.2 서명 키
 
-The key is the owner's, is never committed, and cannot be regenerated: **if it is lost, no
-future build can update an installed app.** Back the keystore and its passwords up somewhere
-that is not this repository and not this laptop alone.
+키는 소유자의 것이고 커밋되지 않으며 재생성할 수 없다. **키를 잃으면 이후 어떤 빌드도
+설치된 앱을 업데이트할 수 없다.** 키스토어와 비밀번호를 이 저장소도, 이 노트북 하나도
+아닌 곳에 백업한다.
 
-Create it once:
+한 번만 생성한다:
 
 ```bash
 keytool -genkey -v -keystore ~/libreomi-release.jks \
   -keyalg RSA -keysize 4096 -validity 10000 -alias libreomi
 ```
 
-Then point the build at it with `android/key.properties` (git-ignored, and `.gitignore` also
-covers `*.jks` / `*.keystore` so the keystore itself cannot be added by accident):
+그다음 `android/key.properties`로 빌드가 키를 찾게 한다. 이 파일은 git-ignore이며
+`.gitignore`가 `*.jks` / `*.keystore`도 덮어 키스토어가 실수로 추가되지 않는다:
 
 ```properties
 storeFile=/absolute/path/to/libreomi-release.jks
@@ -130,22 +150,22 @@ keyAlias=libreomi
 keyPassword=<key password>
 ```
 
-`android/app/build.gradle.kts` resolves signing material in this order:
+`android/app/build.gradle.kts`는 서명 자료를 다음 순서로 찾는다.
 
-1. the `LIBREOMI_KEYSTORE_PATH`, `LIBREOMI_KEYSTORE_PASSWORD`, `LIBREOMI_KEYSTORE_ALIAS` and
-   `LIBREOMI_KEY_PASSWORD` environment variables — how CI injects the key from secrets;
-2. `android/key.properties`;
-3. neither: the release build falls back to the **debug** key and logs a Gradle warning
-   naming the missing piece. This keeps `flutter build apk --release` working for contributors
-   and for the CI compile check. A debug-signed APK must never be published.
+1. `LIBREOMI_KEYSTORE_PATH`, `LIBREOMI_KEYSTORE_PASSWORD`, `LIBREOMI_KEYSTORE_ALIAS`,
+   `LIBREOMI_KEY_PASSWORD` 환경변수 — CI가 시크릿으로 주입하는 경로
+2. `android/key.properties`
+3. 둘 다 없으면 릴리스 빌드가 **디버그** 키로 대체되고, 빠진 항목을 이름으로 알리는
+   Gradle 경고를 남긴다. 기여자와 CI 컴파일 확인에서 `flutter build apk --release`가
+   계속 동작하게 하기 위해서다. 디버그로 서명된 APK는 절대 배포하지 않는다.
 
-`flutter build` filters Gradle's own output, so that warning is only visible under a direct
-Gradle invocation (`cd android && ./gradlew :app:signingReport`). **Treat the signing
-certificate as the authoritative check, never the absence of a warning.** `scripts/release.sh`
-prints it on every run, and refuses to create a GitHub Release from debug-signed artifacts.
+`flutter build`는 Gradle 출력을 걸러 내므로 그 경고는 직접 Gradle을 실행할 때만 보인다
+(`cd android && ./gradlew :app:signingReport`). **권위 있는 확인은 서명 인증서이지,
+경고의 부재가 아니다.** `scripts/release.sh`는 실행할 때마다 인증서를 출력하고,
+디버그로 서명된 산출물의 GitHub Release 생성을 거부한다.
 
-Check which key actually signed an APK — `scripts/release.sh` prints this, and warns loudly
-when it sees `CN=Android Debug`:
+어떤 키가 APK에 서명했는지 확인한다. `scripts/release.sh`가 이 값을 출력하고
+`CN=Android Debug`를 보면 크게 경고한다:
 
 ```bash
 # newest installed build-tools, the same one release.yml picks (release.sh prefers an
@@ -154,46 +174,47 @@ when it sees `CN=Android Debug`:
   verify --print-certs build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
 ```
 
-For CI, the same keystore goes into repository secrets as `LIBREOMI_KEYSTORE_BASE64`
-(`base64 -i ~/libreomi-release.jks`), `LIBREOMI_KEYSTORE_PASSWORD`, `LIBREOMI_KEYSTORE_ALIAS`
-and `LIBREOMI_KEY_PASSWORD`.
+CI에서는 같은 키스토어를 저장소 시크릿 `LIBREOMI_KEYSTORE_BASE64`
+(`base64 -i ~/libreomi-release.jks`), `LIBREOMI_KEYSTORE_PASSWORD`,
+`LIBREOMI_KEYSTORE_ALIAS`, `LIBREOMI_KEY_PASSWORD`에 넣는다.
 
-### 7.3 Release checklist
+### 7.3 릴리스 체크리스트
 
-1. Draft the notes: `scripts/changelog_draft.py --tag vX.Y.Z` prints a Keep a Changelog
-   section from the merged PRs. Rewrite the (Korean) PR titles into English user-facing lines
-   and paste them into `CHANGELOG.md`. Individual PRs deliberately do **not** touch
-   `CHANGELOG.md`: parallel PRs would conflict in it on every merge.
-2. Bump `version:` in `pubspec.yaml` per §7.1 and merge that with the changelog edit.
-3. `scripts/release.sh --dry-run` — builds `app-arm64-v8a-release.apk`,
-   `app-armeabi-v7a-release.apk` and `app-release.aab`, prints sizes, sha256 and the signing
-   certificate, and uploads nothing. Confirm the certificate is *not* the debug key.
-4. Install the arm64 APK on a phone and run the smoke checklist (§5) on two devices.
-5. `git tag vX.Y.Z && git push origin vX.Y.Z`. That tag push is what
-   `.github/workflows/release.yml` reacts to; while Actions is disabled on this account, run
-   `scripts/release.sh` (without `--dry-run`) locally instead — it creates the same draft
-   release with the same three artifacts attached.
-6. Edit the draft release on GitHub: Korean notes plus the one-line English summary, per §1.
-   Publish it.
-7. Play internal testing takes `app-release.aab` and is out of scope for this repository's
-   automation; upload it by hand via the Play Console
-   (<https://support.google.com/googleplay/android-developer/answer/9859152>). Before that upload,
-   re-read §8 and paste the current in-app disclosure text into the Play Console's sensitive
-   permission declarations — Play compares what the form claims against what the app shows.
+1. 릴리스 노트 초안을 만든다: `scripts/changelog_draft.py --tag vX.Y.Z`가 병합된 PR에서
+   Keep a Changelog 절을 출력한다. (한국어) PR 제목을 사용자 관점 문장으로 다듬어
+   `CHANGELOG.md`에 붙여넣는다. 개별 PR은 의도적으로 `CHANGELOG.md`를 건드리지 않는다.
+   병렬 PR이 병합마다 충돌하기 때문이다.
+2. §7.1에 따라 `pubspec.yaml`의 `version:`을 올리고, 그 변경을 체인지로그 수정과 함께
+   병합한다.
+3. `scripts/release.sh --dry-run` — `app-arm64-v8a-release.apk`,
+   `app-armeabi-v7a-release.apk`, `app-release.aab`을 빌드하고 크기·sha256·서명 인증서를
+   출력하며 아무것도 업로드하지 않는다. 인증서가 디버그 키가 **아님**을 확인한다.
+4. arm64 APK를 폰에 설치하고 §5 스모크 체크리스트를 기기 두 대에서 실행한다.
+5. `git tag vX.Y.Z && git push origin vX.Y.Z`. 이 태그 push에
+   `.github/workflows/release.yml`이 반응한다. 이 계정에서 Actions가 비활성인 동안에는
+   `scripts/release.sh`를 `--dry-run` 없이 로컬에서 실행한다. 같은 세 산출물이 붙은
+   드래프트 릴리스가 만들어진다.
+6. GitHub에서 드래프트 릴리스 편집: §1에 따라 한국어 노트와 English 한 줄 요약을 넣고
+   공개한다.
+7. Play 내부 테스트에는 `app-release.aab`를 쓴다. 이 저장소의 자동화 범위 밖이므로 Play
+   Console에서 수동 업로드한다
+   (<https://support.google.com/googleplay/android-developer/answer/9859152>). 업로드
+   전에 §8을 다시 읽고 현재 앱 내 고지 문안을 Play Console의 민감 권한 선언에 붙여넣는다.
+   Play는 양식의 주장과 앱이 보여 주는 내용을 대조한다.
 
-## 8. Play sensitive permissions and prominent disclosure (LO-64)
+## 8. Play 민감 권한과 고지 (LO-64)
 
-Play requires that an app which uses microphone, location or all-the-time background access
-tells the user **inside the app, before the data is used**, what is collected and why, in a
-screen the user cannot miss. LibreOmi does that with `lib/pages/permissions_rationale_page.dart`,
-shown once on first launch (`SettingsService.rationaleShown`) and reachable afterwards from the
-Live tab. The screen only *displays* permission state; each permission is still requested at the
-point of use, which is what `docs/04-android-platform-notes.md` §3 requires.
+Play는 마이크·위치·항상 백그라운드 접근을 쓰는 앱이 **데이터 사용 전에, 앱 안에서**,
+사용자가 놓칠 수 없는 화면으로 무엇을 왜 수집하는지 알리도록 요구한다. LibreOmi는
+`lib/pages/permissions_rationale_page.dart`로 이를 수행한다. 첫 실행에서 한 번
+(`SettingsService.rationaleShown`) 보여 주고, 이후에는 실시간 탭에서 다시 열 수 있다.
+이 화면은 권한 상태를 **표시**만 하고, 각 권한은 실제 사용 시점에 요청한다.
+`docs/04-android-platform-notes.md` §3이 요구하는 방식이다.
 
-**Keep this section and that page in sync.** The page is the disclosure; the text below is the
-Play Console paraphrase of it. If one changes, change the other in the same PR.
+**이 절과 그 화면을 함께 유지한다.** 화면이 고지이고, 아래 문안은 그 화면을 Play
+Console용으로 바꾼 것이다. 한쪽을 바꾸면 같은 PR에서 다른 쪽도 바꾼다.
 
-### 8.1 Declaration draft (English, paste into the Play Console)
+### 8.1 선언 초안 (English, Play Console에 그대로 붙여넣기)
 
 > LibreOmi records audio from a connected Omi wearable or from the phone's microphone, and only
 > while the user has started a capture. The audio is transcribed either entirely on the device or,
@@ -225,16 +246,16 @@ Play Console paraphrase of it. If one changes, change the other in the same PR.
 >   A reminder is delivered inexactly when the permission is absent; no additional data is
 >   collected either way.
 
-### 8.2 Before submitting
+### 8.2 제출 전
 
-- Verify each bullet against `android/app/src/main/AndroidManifest.xml`; the manifest is the
-  authority, this list is a copy.
-- Every permission in the manifest is listed above and has a row on the rationale screen. When a
-  future issue adds one, add it to both in the same PR — a declaration that is narrower than the
-  manifest is what Play rejects.
-- Fill the Data safety form from the same facts: audio and "other user-generated content" are
-  collected, are not shared with third parties except the transcription/LLM endpoint the user
-  configures themselves, and are not used for advertising or analytics.
-- The backup claim is only as true as the two XML rule files. If a future issue adds a data
-  directory (the way LO-50 added `<app support>/sdcard/`), decide whether it is excluded and
-  update this section, the rationale screen and `docs/04-android-platform-notes.md` §9 together.
+- 각 항목을 `android/app/src/main/AndroidManifest.xml`과 대조한다. 매니페스트가
+  권위이고 이 목록은 사본이다.
+- 매니페스트의 모든 권한이 위 목록에 있고 고지 화면에 행이 있어야 한다. 앞으로 이슈가
+  권한을 추가하면 같은 PR에서 둘 다 추가한다. 매니페스트보다 좁은 선언은 Play가
+  거부하는 바로 그 형태다.
+- 같은 사실로 데이터 안전성 양식을 채운다. 오디오와 "기타 사용자 생성 콘텐츠"는
+  수집되며, 사용자가 직접 설정한 전사/LLM 엔드포인트 외에는 제3자와 공유하지 않고,
+  광고나 분석에 쓰지 않는다.
+- 백업 주장은 두 XML 규칙 파일이 사실일 때만 참이다. 앞으로 이슈가 데이터
+  디렉터리를 추가하면(LO-50이 `<app support>/sdcard/`를 추가한 것처럼) 제외 여부를
+  정하고 이 절, 고지 화면, `docs/04-android-platform-notes.md` §9를 함께 고친다.
